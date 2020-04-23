@@ -30,7 +30,7 @@
 #include "geometry.h"
 #include <fstream>
 
-#include "cow.h"
+#include "boat.h"
 
 static const float inchToMm = 25.4;
 enum FitResolutionGate { kFill = 0, kOverscan };
@@ -147,11 +147,9 @@ const uint32_t imageHeight = 600;
 // | c20 c21 c22 c23 | -> z-axis
 // | c30 c31 c32 c33 | -> translation
 // represented by worldToCamera
-// const Matrix44f worldToCamera = {0.707107, -0.331295, 0.624695, 0, 0, 0.883452, 0.468521, 0, -0.707107, -0.331295, 0.624695, 0, -1.63871, -5.747777, -40.400412, 1};
-const Matrix44f worldToCamera = {0.707107, -0.331295, 0.624695, 0, 0, 0.883452, 0.468521, 0, -0.707107, -0.331295, 0.624695, 0, -1.63871, -3.747777, -30.400412, 1};
+const Matrix44f worldToCamera = {0.707107, -0.331295, 0.624695, 0, 0, 0.883452, 0.468521, 0, -0.707107, -0.331295, 0.624695, 0, -1.63871, -3.747777, -15.400412, 1};
 
 
-const uint32_t ntris = 3156;
 const float nearClippingPLane = 1;
 const float farClippingPLane = 1000;
 float focalLength = 20; // in mm
@@ -202,7 +200,7 @@ int main(int argc, char **argv)
         Vec3f &v2 = vertices[nvertices[i * 3 + 2]];
         
         float xRadians = 0.0;
-        float yRadians = 1.0;
+        float yRadians = 2.0;
         float zRadians = 0.0;
         float sx = sin(xRadians);
         float sy = sin(yRadians);
@@ -224,9 +222,6 @@ int main(int argc, char **argv)
         // Convert the vertices of the triangle to raster space
         // [/comment]
         Vec3f v0Raster, v1Raster, v2Raster;
-//        convertToRaster(v0, worldToCamera, l, r, t, b, nearClippingPLane, imageWidth, imageHeight, v0Raster);
-//        convertToRaster(v1, worldToCamera, l, r, t, b, nearClippingPLane, imageWidth, imageHeight, v1Raster);
-//        convertToRaster(v2, worldToCamera, l, r, t, b, nearClippingPLane, imageWidth, imageHeight, v2Raster);
         convertToRaster(vr0, worldToCamera, l, r, t, b, nearClippingPLane, imageWidth, imageHeight, v0Raster);
         convertToRaster(vr1, worldToCamera, l, r, t, b, nearClippingPLane, imageWidth, imageHeight, v1Raster);
         convertToRaster(vr2, worldToCamera, l, r, t, b, nearClippingPLane, imageWidth, imageHeight, v2Raster);
@@ -237,17 +232,6 @@ int main(int argc, char **argv)
         v0Raster.z = 1 / v0Raster.z,
         v1Raster.z = 1 / v1Raster.z,
         v2Raster.z = 1 / v2Raster.z;
-        
-        
-        // [comment]
-        // Prepare vertex attributes. Divde them by their vertex z-coordinate
-        // (though we use a multiplication here because v.z = 1 / v.z)
-        // [/comment]
-        Vec2f st0 = st[stindices[i * 3]];
-        Vec2f st1 = st[stindices[i * 3 + 1]];
-        Vec2f st2 = st[stindices[i * 3 + 2]];
-
-        st0 *= v0Raster.z, st1 *= v1Raster.z, st2 *= v2Raster.z;
     
         float xmin = min3(v0Raster.x, v1Raster.x, v2Raster.x);
         float ymin = min3(v0Raster.y, v1Raster.y, v2Raster.y);
@@ -286,9 +270,9 @@ int main(int argc, char **argv)
                     if (z < depthBuffer[y * imageWidth + x]) {
                         depthBuffer[y * imageWidth + x] = z;
                         
-                        Vec2f st = st0 * w0 + st1 * w1 + st2 * w2;
+                        // Vec2f st = st0 * w0 + st1 * w1 + st2 * w2;
                         
-                        st *= z;
+                        // st *= z;
                         
                         // [comment]
                         // If you need to compute the actual position of the shaded
@@ -323,23 +307,11 @@ int main(int argc, char **argv)
                         
                         int val = 255;
                         
-                        if (nDotView >= 0) {
+                        if (nDotView  >= 0) {
                             ofs << "<line x1=\"" << v0Raster.x << "\" y1=\"" << v0Raster.y << "\" x2=\"" << v1Raster.x << "\" y2=\"" << v1Raster.y << "\" style=\"stroke:rgb(" << val << ",0,0);stroke-width:1\" />\n";
                             ofs << "<line x1=\"" << v1Raster.x << "\" y1=\"" << v1Raster.y << "\" x2=\"" << v2Raster.x << "\" y2=\"" << v2Raster.y << "\" style=\"stroke:rgb(" << val << ",0,0);stroke-width:1\" />\n";
                             ofs << "<line x1=\"" << v2Raster.x << "\" y1=\"" << v2Raster.y << "\" x2=\"" << v0Raster.x << "\" y2=\"" << v0Raster.y << "\" style=\"stroke:rgb(" << val << ",0,0);stroke-width:1\" />\n";
                         }
-                        
-                        // [comment]
-                        // The final color is the reuslt of the faction ration multiplied by the
-                        // checkerboard pattern.
-                        // [/comment]
-//                        const int M = 10;
-//                        float checker = (fmod(st.x * M, 1.0) > 0.5) ^ (fmod(st.y * M, 1.0) < 0.5);
-//                        float c = 0.3 * (1 - checker) + 0.7 * checker;
-//                        nDotView *= c;
-//                        frameBuffer[y * imageWidth + x].x = nDotView * 255;
-//                        frameBuffer[y * imageWidth + x].y = nDotView * 255;
-//                        frameBuffer[y * imageWidth + x].z = nDotView * 255;
                     }
                 }
             }
